@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"os"
@@ -41,7 +42,7 @@ func BenchmarkSelect(b *testing.B) {
 		waitMicros = waitMicro
 	}
 
-	b.Run("test", func(b *testing.B) {
+	b.Run(fmt.Sprintf("sleep-%d", waitMicros), func(b *testing.B) {
 		dur := time.Duration(time.Duration(waitMicros) * time.Microsecond)
 
 		for i := 0; i < b.N; i++ {
@@ -53,12 +54,15 @@ func BenchmarkSelect(b *testing.B) {
 			}
 
 			start = time.Now()
+			var finish time.Duration
+
 			select {
 			case <-time.After(dur):
-				waitSummary.Observe(float64(time.Since(start).Microseconds()))
+				finish = time.Since(start)
 			}
 
-			excessWaitSummary.Observe(float64((time.Since(start) - dur).Microseconds()))
+			waitSummary.Observe(float64(finish.Microseconds()))
+			excessWaitSummary.Observe(float64((finish - dur).Microseconds()))
 		}
 	})
 
